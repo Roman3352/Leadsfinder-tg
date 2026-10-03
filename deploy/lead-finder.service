@@ -1,0 +1,23 @@
+# Systemd unit — держит бота включённым постоянно и поднимает его снова после падения/перезагрузки сервера.
+# Установка (на сервере, от root):
+#   cp deploy/lead-finder.service /etc/systemd/system/lead-finder.service
+#   systemctl daemon-reload
+#   systemctl enable --now lead-finder
+# Логи: journalctl -u lead-finder -f
+
+[Unit]
+Description=AI Lead Finder Telegram bot
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=leadfinder
+WorkingDirectory=/opt/lead-finder
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+EnvironmentFile=/opt/lead-finder/.env
+
+[Install]
+WantedBy=multi-user.target

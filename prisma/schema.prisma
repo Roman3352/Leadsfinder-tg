@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SearchJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  STOPPED_BUDGET_LIMIT
+  FAILED
+}
+
+enum AnalysisStatus {
+  PENDING
+  QUICK_DONE
+  DEEP_DONE
+  ERROR
+}
+
+enum CrmStatus {
+  NEW
+  FAVORITE
+  CONTACTED
+  REPLIED
+  NEGOTIATION
+  CLIENT
+  REFUSED
+  NOT_RELEVANT
+}
+
+enum ApiProvider {
+  GOOGLE_PLACES_SEARCH
+  GOOGLE_PLACES_DETAILS
+  FIRECRAWL
+  PAGESPEED
+  OPENAI
+}
+
+model User {
+  id         String      @id @default(cuid())
+  telegramId String      @unique
+  settings   Json        @default("{}")
+  createdAt  DateTime    @default(now())
+  searchJobs SearchJob[]
+}
+
+model SearchJob {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+
+  niche          String
+  location       String
+  radiusKm       Int?
+  requestedCount Int
+
+  status         SearchJobStatus @default(QUEUED)
+
+  foundCount       Int @default(0)
+  withWebsiteCount Int @default(0)
+  analyzedCount    Int @default(0)
+  promisingCount   Int @default(0)
+
+  maxGoogleRequests    Int
+  maxFirecrawlCredits  Int
+  maxPagespeedRequests Int
+  maxAiCalls           Int
+
+  usedGoogleRequests    Int @default(0)
+  usedFirecrawlCredits  Int @default(0)
+  usedPagespeedRequests Int @default(0)
+  usedAiCalls           Int @default(0)
+
+  costEstimateMin Decimal? @db.Decimal(10, 4)
+  costEstimateMax Decimal? @db.Decimal(10, 4)
+
+  stoppedReason String?
+
+  startedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  businesses   SearchJobBusiness[]
+  apiUsageLogs ApiUsageLog[]
+
+  @@index([userId, status])
+}
+
+model Business {
+  id            String @id @default(cuid())
+  googlePlaceId String @unique
+
+  name         String
+  category     String?
+  address      String?
+  city         String?
+  bundesland   String?
+  phone        String?
+  website      String?
+  mapsUrl      String?
+  rating       Float?
+  reviewCount  Int?
+  openingHours Json?
+  lat          Float?
+  lng          Float?
+
+  detailsFetchedAt DateTime?
+  lastSeenAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  searchJobs      SearchJobBusiness[]
+  websiteAnalysis WebsiteAnalysis?
+  lead            Lead?
+
+  @@index([city])
+}
+
+model SearchJobBusiness {
+  id           String   @id @default(cuid())
+  searchJobId  String
+  businessId   String
+  discoveredAt DateTime @default(now())
+
+  searchJob SearchJob @relation(fields: [searchJobId], references: [id])
+  business  Business  @relation(fields: [businessId], references: [id])
+
+  @@unique([searchJobId, businessId])
+}
+
+model WebsiteAnalysis {
+  id         String   @id @default(cuid())
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id])
+
+  status AnalysisStatus @default(PENDING)
+
+  normalizedDomain String?
+
+  quickCheckResult   Json?
+  deepAnalysisResult Json?
+  pagespeedResult    Json?
+  crawledPages       Json?
+
+  errorMessage String?
+
+  quickCheckedAt     DateTime?
+  deepAnalyzedAt     DateTime?
+  pagespeedCheckedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([normalizedDomain])
+}
+
+model Lead {
+  id         String   @id @default(cuid())
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id])
+
+  score          Int
+  scoreBreakdown Json
+  opportunities  Json
+
+  salesBrief String? @db.Text
+
+  crmStatus  CrmStatus @default(NEW)
+  isFavorite Boolean   @default(false)
+
+  offeredPrice   Decimal?  @db.Decimal(10, 2)
+  contactChannel String?
+  lastContactAt  DateTime?
+  nextContactAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outreachMessages Outreach[]
+  notes            Note[]
+
+  @@index([score])
+  @@index([crmStatus])
+}
+
+model Outreach {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  messageText String  @db.Text
+  channel     String?
+  sent        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model ApiUsageLog {
+  id          String     @id @default(cuid())
+  searchJobId String?
+  searchJob   SearchJob? @relation(fields: [searchJobId], references: [id])
+
+  provider      ApiProvider
+  requestType   String
+  unitsConsumed Int         @default(1)
+
+  estimatedCostMin Decimal? @db.Decimal(10, 6)
+  estimatedCostMax Decimal? @db.Decimal(10, 6)
+  actualCost       Decimal? @db.Decimal(10, 6)
+
+  createdAt DateTime @default(now())
+
+  @@index([provider, createdAt])
+}
