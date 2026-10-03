@@ -13,7 +13,7 @@
 const DEFAULT_SEARCH_FIELDS = ["places.id", "places.displayName", "places.formattedAddress"];
 
 const DEFAULT_DETAILS_FIELDS = [
-  "website",
+  "websiteUri",
   "internationalPhoneNumber",
   "rating",
   "userRatingCount",

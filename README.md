@@ -29,6 +29,8 @@ Lead Score, и по кнопке пишет вам объяснение (Sales B
 
 ## Быстрый старт (на сервере — см. DEPLOY.md, если у вас только телефон)
 
+Для запуска требуется Node.js 20.6 или новее.
+
 ```bash
 cp .env.example .env
 # впишите как минимум: TELEGRAM_BOT_TOKEN, ALLOWED_TELEGRAM_IDS, GOOGLE_PLACES_API_KEY

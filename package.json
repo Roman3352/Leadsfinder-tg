@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx src/bot/bot.ts",
-    "dev": "tsx watch src/bot/bot.ts",
+    "start": "node --env-file=.env --import tsx src/bot/bot.ts",
+    "dev": "node --env-file=.env --import tsx --watch src/bot/bot.ts",
     "test": "node scripts/run-tests.mjs",
     "db:up": "docker compose up -d postgres",
     "db:push": "prisma db push",
